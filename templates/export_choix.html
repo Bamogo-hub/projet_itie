@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %}Exporter les données{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header mb-4">
+        <div>
+            <h1 class="page-title"><i class="fas fa-file-excel me-2"></i>Exporter les données</h1>
+            <p class="page-subtitle">Sélectionnez les colonnes à inclure dans votre fichier Excel</p>
+        </div>
+        <a href="{{ url_for('liste_declarations') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Retour
+        </a>
+    </div>
+
+    <form method="POST" action="{{ url_for('export_excel') }}" id="export-form">
+        <div class="card-custom mb-4">
+            <div class="card-custom-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-columns me-2"></i>Colonnes disponibles</h5>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-xs btn-view" onclick="selectAll()">
+                        <i class="fas fa-check-square me-1"></i>Tout sélectionner
+                    </button>
+                    <button type="button" class="btn btn-xs btn-delete" onclick="deselectAll()">
+                        <i class="fas fa-square me-1"></i>Tout désélectionner
+                    </button>
+                    <button type="button" class="btn btn-xs btn-edit" onclick="selectDefault()">
+                        <i class="fas fa-star me-1"></i>Sélection par défaut
+                    </button>
+                </div>
+            </div>
+            <div class="card-custom-body">
+
+                <!-- Groupe : Entité déclarante -->
+                <div class="export-group">
+                    <div class="export-group-title">
+                        <span class="section-badge-sm">A</span>
+                        Entité déclarante
+                    </div>
+                    <div class="export-columns-grid">
+                        {% set group_a = ['id','date_saisie','utilisateur_nom','utilisateur_email',
+                                          'denomination_sociale','ninea','rccm','forme_juridique',
+                                          'pays','ville','siege_social','telephone','email_entreprise',
+                                          'cotee_bourse','filiale_cotee','entreprise_etat'] %}
+                        {% for key, label in all_columns %}
+                        {% if key in group_a %}
+                        <label class="export-col-item" data-group="a" data-default="{{ 'true' if key in ['id','date_saisie','denomination_sociale','ninea','rccm','forme_juridique','pays','statut'] else 'false' }}">
+                            <input type="checkbox" name="colonnes" value="{{ key }}" checked
+                                   class="col-checkbox">
+                            <div class="col-info">
+                                <span class="col-label">{{ label }}</span>
+                                <span class="col-key">{{ key }}</span>
+                            </div>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Groupe : Bénéficiaire effectif -->
+                <div class="export-group">
+                    <div class="export-group-title">
+                        <span class="section-badge-sm">B</span>
+                        Bénéficiaire effectif
+                    </div>
+                    <div class="export-columns-grid">
+                        {% set group_b = ['beneficiaire_nom','beneficiaire_prenom','sexe',
+                                          'date_naissance','lieu_naissance','nationalite',
+                                          'pays_residence','adresse_personnelle','adresse_professionnelle',
+                                          'numero_cni','numero_passeport','ppe','fonction_ppe','categorie_ppe'] %}
+                        {% for key, label in all_columns %}
+                        {% if key in group_b %}
+                        <label class="export-col-item" data-default="{{ 'true' if key in ['beneficiaire_nom','beneficiaire_prenom','nationalite','ppe'] else 'false' }}">
+                            <input type="checkbox" name="colonnes" value="{{ key }}" checked
+                                   class="col-checkbox">
+                            <div class="col-info">
+                                <span class="col-label">{{ label }}</span>
+                                <span class="col-key">{{ key }}</span>
+                            </div>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Groupe : Participation -->
+                <div class="export-group">
+                    <div class="export-group-title">
+                        <span class="section-badge-sm">C</span>
+                        Participation et contrôle
+                    </div>
+                    <div class="export-columns-grid">
+                        {% set group_c = ['parts_directes','nombre_parts_directes','pourcentage_participation',
+                                          'droits_vote_directs','pourcentage_voix','parts_indirectes',
+                                          'pourcentage_participation_indirecte','representant_legal','date_beneficiaire'] %}
+                        {% for key, label in all_columns %}
+                        {% if key in group_c %}
+                        <label class="export-col-item" data-default="{{ 'true' if key in ['pourcentage_participation','pourcentage_voix'] else 'false' }}">
+                            <input type="checkbox" name="colonnes" value="{{ key }}" checked
+                                   class="col-checkbox">
+                            <div class="col-info">
+                                <span class="col-label">{{ label }}</span>
+                                <span class="col-key">{{ key }}</span>
+                            </div>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Groupe : Métadonnées -->
+                <div class="export-group">
+                    <div class="export-group-title">
+                        <i class="fas fa-cog me-2"></i>
+                        Métadonnées
+                    </div>
+                    <div class="export-columns-grid">
+                        {% set group_meta = ['statut','fichier_zip','lien_drive'] %}
+                        {% for key, label in all_columns %}
+                        {% if key in group_meta %}
+                        <label class="export-col-item" data-default="{{ 'true' if key == 'statut' else 'false' }}">
+                            <input type="checkbox" name="colonnes" value="{{ key }}" checked
+                                   class="col-checkbox">
+                            <div class="col-info">
+                                <span class="col-label">{{ label }}</span>
+                                <span class="col-key">{{ key }}</span>
+                            </div>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Résumé et bouton export -->
+        <div class="card-custom">
+            <div class="card-custom-body">
+                <div class="export-summary">
+                    <div class="export-summary-info">
+                        <i class="fas fa-info-circle text-primary me-2"></i>
+                        <span id="selected-count" class="fw-bold text-primary">{{ all_columns|length }}</span>
+                        colonne(s) sélectionnée(s) sur
+                        <strong>{{ all_columns|length }}</strong> disponibles
+                    </div>
+                    <button type="submit" class="btn btn-submit" id="export-btn">
+                        <i class="fas fa-file-excel me-2"></i>
+                        Télécharger le fichier Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.export-group {
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+.export-group-title {
+    background: linear-gradient(to right, var(--bg-light), #f0f4fa);
+    padding: 0.65rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+}
+.export-columns-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.5rem;
+    padding: 0.85rem;
+    background: var(--bg-white);
+}
+.export-col-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--bg-white);
+}
+.export-col-item:hover { border-color: var(--primary); background: #f0f5ff; }
+.export-col-item:has(input:checked) {
+    border-color: var(--primary);
+    background: linear-gradient(to right, #e8f0ff, #f0f5ff);
+}
+.col-checkbox { cursor: pointer; accent-color: var(--primary); flex-shrink: 0; width: 16px; height: 16px; }
+.col-info { display: flex; flex-direction: column; min-width: 0; }
+.col-label { font-size: 0.82rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.col-key { font-size: 0.7rem; color: var(--text-secondary); font-family: monospace; }
+.export-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.export-summary-info { font-size: 0.9rem; color: var(--text-secondary); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const checkboxes = document.querySelectorAll('.col-checkbox');
+
+function updateCount() {
+    const n = document.querySelectorAll('.col-checkbox:checked').length;
+    document.getElementById('selected-count').textContent = n;
+    document.getElementById('export-btn').disabled = n === 0;
+}
+
+checkboxes.forEach(cb => cb.addEventListener('change', updateCount));
+
+function selectAll() {
+    checkboxes.forEach(cb => cb.checked = true);
+    updateCount();
+}
+function deselectAll() {
+    checkboxes.forEach(cb => cb.checked = false);
+    updateCount();
+}
+function selectDefault() {
+    checkboxes.forEach(cb => {
+        const item = cb.closest('.export-col-item');
+        cb.checked = item.dataset.default === 'true';
+    });
+    updateCount();
+}
+
+updateCount();
+</script>
+{% endblock %}

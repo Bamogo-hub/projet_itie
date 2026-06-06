@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Base de données nationale{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="page-header mb-4">
+    <div>
+      <h1 class="page-title"><i class="fas fa-database me-2"></i>Base de données nationale</h1>
+      <p class="page-subtitle">Registre des bénéficiaires effectifs des entreprises</p>
+    </div>
+    <div class="d-flex gap-2">
+      {% if export_ok %}
+      <a href="{{ url_for('export_choix') }}" class="btn btn-success-custom">
+        <i class="fas fa-file-excel me-2"></i>Exporter
+      </a>
+      {% else %}
+      <button class="btn btn-success-custom" style="opacity:.5;cursor:not-allowed" disabled
+        title="Export non autorisé — contactez l'administrateur">
+        <i class="fas fa-lock me-2"></i>Export (non autorisé)
+      </button>
+      {% endif %}
+      <a href="{{ url_for('nouvelle_declaration') }}" class="btn btn-primary-custom">
+        <i class="fas fa-plus me-2"></i>Nouvelle
+      </a>
+    </div>
+  </div>
+
+  {% if not export_ok %}
+  <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+    <i class="fas fa-lock fa-lg"></i>
+    <div>
+      <strong>Export désactivé</strong> — Vous n'avez pas l'autorisation d'exporter les données.
+      Veuillez contacter l'administrateur pour obtenir cet accès.
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Filtres -->
+  <div class="card-custom mb-4">
+    <div class="card-custom-body">
+      <form method="GET" class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label-custom">Recherche</label>
+          <div class="search-input-wrapper">
+            <i class="fas fa-search"></i>
+            <input type="text" name="search" class="form-control-custom search-input"
+                   placeholder="NINEA, RCCM, nom entreprise, bénéficiaire..." value="{{ search }}">
+          </div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label-custom">PPE</label>
+          <select name="ppe" class="form-select-custom">
+            <option value="">Tous</option>
+            <option value="Oui" {% if filtre_ppe=='Oui' %}selected{% endif %}>PPE uniquement</option>
+            <option value="Non" {% if filtre_ppe=='Non' %}selected{% endif %}>Non PPE</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label-custom">Forme juridique</label>
+          <select name="forme" class="form-select-custom">
+            <option value="">Toutes</option>
+            {% for f in ['SA','SARL','SUARL','SAS','SNC','SCS','GIE','Association','ONG'] %}
+            <option value="{{ f }}" {% if filtre_forme==f %}selected{% endif %}>{{ f }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-primary-custom w-100">
+            <i class="fas fa-filter me-2"></i>Filtrer
+          </button>
+        </div>
+        <div class="col-md-2">
+          <a href="{{ url_for('liste_declarations') }}" class="btn btn-outline-secondary w-100">
+            <i class="fas fa-times me-2"></i>Réinitialiser
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card-custom">
+    <div class="card-custom-header">
+      <h5><i class="fas fa-list me-2"></i>{{ declarations|length }} déclaration(s)</h5>
+    </div>
+    <div class="card-custom-body p-0">
+      <div class="table-responsive">
+        <table class="table table-custom mb-0">
+          <thead>
+            <tr>
+              <th>ID</th><th>Entreprise</th><th>NINEA</th><th>Forme</th>
+              <th>Bénéficiaire</th><th>PPE</th><th>% Part.</th>
+              <th>Date</th><th>Documents</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in declarations %}
+            <tr>
+              <td><span class="id-badge">{{ d.id }}</span></td>
+              <td>
+                <strong>{{ d.denomination_sociale or '—' }}</strong>
+                {% if d.ville %}<br><small class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ d.ville }}</small>{% endif %}
+              </td>
+              <td><code>{{ d.ninea or '—' }}</code></td>
+              <td>{% if d.forme_juridique and d.forme_juridique!='Non renseigné' %}<span class="forme-badge">{{ d.forme_juridique }}</span>{% else %}—{% endif %}</td>
+              <td>
+                <div class="beneficiaire-name">{{ d.beneficiaire_nom or '—' }} {{ d.beneficiaire_prenom or '' }}</div>
+                {% if d.nationalite %}<small class="text-muted">{{ d.nationalite }}</small>{% endif %}
+              </td>
+              <td>
+                {% if d.ppe=='Oui' %}<span class="badge-ppe-yes"><i class="fas fa-exclamation-triangle me-1"></i>PPE</span>
+                {% else %}<span class="badge-ppe-no">Non</span>{% endif %}
+              </td>
+              <td>
+                {% if d.pourcentage_participation %}
+                <div class="participation-bar">
+                  <div class="participation-fill" style="width:{{ [d.pourcentage_participation|float,100]|min }}%"></div>
+                  <span>{{ d.pourcentage_participation }}%</span>
+                </div>
+                {% else %}—{% endif %}
+              </td>
+              <td>{{ d.date_saisie.strftime('%d/%m/%Y') if d.date_saisie else '—' }}</td>
+              <td>
+                {% if d.fichiers %}
+                <a href="{{ url_for('voir_documents', decl_id=d.id) }}" class="btn btn-xs btn-doc" title="{{ d.fichiers|length }} fichier(s)">
+                  <i class="fas fa-folder-open me-1"></i>{{ d.fichiers|length }}
+                </a>
+                {% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
+              <td>
+                <div class="action-buttons">
+                  <a href="{{ url_for('detail_declaration', decl_id=d.id) }}" class="btn btn-xs btn-view" title="Voir"><i class="fas fa-eye"></i></a>
+                  <a href="{{ url_for('modifier_declaration', decl_id=d.id) }}" class="btn btn-xs btn-edit" title="Modifier"><i class="fas fa-edit"></i></a>
+                  {% if session.get('role')=='admin' %}
+                  <form method="POST" action="{{ url_for('supprimer_declaration', decl_id=d.id) }}"
+                        style="display:inline" onsubmit="return confirm('Supprimer cette déclaration ?')">
+                    <button type="submit" class="btn btn-xs btn-delete" title="Supprimer"><i class="fas fa-trash"></i></button>
+                  </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="10" class="text-center py-5">
+                <i class="fas fa-search fa-3x mb-3 d-block text-muted"></i>
+                <strong>Aucune déclaration trouvée</strong>
+                <p class="text-muted mt-1">Modifiez vos critères ou créez une nouvelle déclaration.</p>
+                <a href="{{ url_for('nouvelle_declaration') }}" class="btn btn-primary-custom mt-2">
+                  <i class="fas fa-plus me-2"></i>Créer une déclaration
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

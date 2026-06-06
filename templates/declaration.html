@@ -1,0 +1,701 @@
+{% extends "base.html" %}
+{% block title %}{% if edit_mode %}Modifier #{{ decl_id }}{% else %}Nouvelle déclaration{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ─── Design du formulaire ──────────────────────────────────── */
+:root{--clr-ok:#1a7a4a;--clr-err:#b31a1a;--clr-warn:#c47a00;}
+
+/* Sections */
+.fs{background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 2px 12px rgba(10,46,92,.07);margin-bottom:1.5rem;overflow:hidden;}
+.fs-head{display:flex;align-items:flex-start;gap:1rem;padding:1.1rem 1.4rem;background:linear-gradient(135deg,var(--primary-dark),var(--primary));}
+.fs-badge{width:44px;height:44px;background:var(--accent);color:var(--primary-dark);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Libre Baskerville',serif;font-size:1.25rem;font-weight:700;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.fs-head h3{font-size:.98rem;font-weight:700;margin:0 0 .15rem;color:#fff;}
+.fs-head p{font-size:.75rem;margin:0;opacity:.8;color:#fff;}
+.fs-body{padding:1.4rem;}
+
+/* Champs flottants */
+.fw{position:relative;margin-bottom:1.1rem;}
+.fw label{display:block;font-size:.77rem;font-weight:600;color:var(--text-secondary);margin-bottom:.3rem;letter-spacing:.2px;}
+.fw .req{color:var(--clr-err);}
+.fw .fc{width:100%;padding:.6rem .9rem;border:1.5px solid var(--border);border-radius:9px;font-size:.88rem;font-family:inherit;background:#fff;color:var(--text-primary);transition:border-color .18s,box-shadow .18s;}
+.fw .fc:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(10,46,92,.1);}
+.fw .fc.is-invalid{border-color:var(--clr-err);background:#fff9f9;}
+.fw .fc.is-valid{border-color:var(--clr-ok);background:#f7fff9;}
+.fw .fc:disabled,.fw .fc[readonly]{background:#f8fafc;color:#8896a6;cursor:not-allowed;}
+select.fc{cursor:pointer;}
+textarea.fc{resize:vertical;min-height:70px;}
+
+/* Feedback */
+.f-fb{font-size:.73rem;margin-top:.28rem;display:none;align-items:center;gap:.3rem;padding:3px 8px;border-radius:5px;font-weight:500;}
+.f-fb.ok{color:var(--clr-ok);background:#efffef;display:flex;}
+.f-fb.err{color:var(--clr-err);background:#fff2f2;display:flex;}
+.f-fb.info{color:var(--clr-warn);background:#fffaed;display:flex;}
+
+/* Compteur CNI */
+.char-ctr{font-size:.7rem;text-align:right;margin-top:2px;color:var(--text-secondary);font-weight:600;}
+.char-ctr.warn{color:var(--clr-warn);}
+.char-ctr.done{color:var(--clr-ok);}
+
+/* Téléphone avec indicatif */
+.tel-wrap{position:relative;}
+.tel-input-row{display:flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden;transition:border-color .18s,box-shadow .18s;}
+.tel-input-row:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px rgba(10,46,92,.1);}
+.tel-prefix{display:flex;align-items:center;gap:.4rem;padding:.6rem .75rem;background:#f0f5ff;border-right:1.5px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;flex-shrink:0;min-width:110px;}
+.tel-prefix:hover{background:#e0ebff;}
+.tel-flag{font-size:1.1rem;}
+.tel-indicatif{font-size:.82rem;font-weight:700;color:var(--primary);}
+.tel-caret{font-size:.6rem;color:var(--text-secondary);margin-left:2px;}
+.tel-number{flex:1;padding:.6rem .75rem;border:none;outline:none;font-size:.88rem;font-family:inherit;background:transparent;}
+.tel-drop{position:absolute;top:100%;left:0;right:0;z-index:9999;background:#fff;border:1.5px solid var(--primary);border-top:none;border-radius:0 0 9px 9px;display:none;box-shadow:var(--shadow-md);}
+.tel-drop.show{display:block;}
+.tel-search{width:100%;padding:.5rem .75rem;border:none;border-bottom:1px solid var(--border);outline:none;font-size:.83rem;}
+.tel-list{max-height:200px;overflow-y:auto;padding:0;margin:0;list-style:none;}
+.tel-item{display:flex;align-items:center;gap:.5rem;padding:.4rem .75rem;cursor:pointer;font-size:.83rem;transition:background .1s;}
+.tel-item:hover{background:#e8f0ff;}
+.tel-item-nom mark{background:rgba(10,46,92,.15);border-radius:2px;font-weight:700;}
+.tel-item small{margin-left:auto;color:var(--text-secondary);}
+
+/* Autocomplete */
+.ac-wrap{position:relative;}
+.ac-drop{position:absolute;top:100%;left:0;right:0;z-index:9999;background:#fff;border:1.5px solid var(--primary);border-top:none;border-radius:0 0 9px 9px;max-height:220px;overflow-y:auto;list-style:none;padding:0;margin:0;box-shadow:var(--shadow-md);display:none;}
+.ac-drop.show{display:block;}
+.ac-item{display:flex;align-items:center;gap:.5rem;padding:.45rem .85rem;font-size:.85rem;cursor:pointer;transition:background .1s;border-bottom:1px solid #f5f5f5;}
+.ac-item:hover,.ac-focused{background:#e8f0ff;}
+.ac-flag{font-size:1.05rem;flex-shrink:0;}
+.ac-item mark{background:rgba(10,46,92,.15);border-radius:2px;font-weight:700;}
+.ac-empty{padding:.6rem .85rem;color:var(--text-secondary);font-size:.8rem;font-style:italic;}
+
+/* Pills radio */
+.pill-group{display:flex;flex-wrap:wrap;gap:.4rem;}
+.pill-lbl{display:flex;align-items:center;gap:.35rem;padding:.38rem .85rem;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;font-size:.82rem;transition:all .15s;user-select:none;background:#f8fafc;}
+.pill-lbl:hover{border-color:var(--primary);background:#eef3ff;}
+.pill-lbl input{display:none;}
+.p-yes{background:#1a7a4a!important;border-color:#1a7a4a!important;color:#fff!important;font-weight:600;}
+.p-no{background:#4a5568!important;border-color:#4a5568!important;color:#fff!important;font-weight:600;}
+.p-nr{background:#c47a00!important;border-color:#c47a00!important;color:#fff!important;font-weight:600;}
+
+/* Bloc question */
+.q-card{background:#f8fafc;border:1px solid var(--border);border-radius:9px;padding:.9rem 1rem;height:100%;}
+.q-card.ppe-card{background:#fffdf0;border-color:#f0c040;}
+.q-lbl{font-size:.8rem;font-weight:700;color:var(--text-primary);margin-bottom:.55rem;display:block;line-height:1.4;}
+
+/* Divider */
+.fdiv{display:flex;align-items:center;gap:.6rem;margin:1.2rem 0 .85rem;}
+.fdiv::before,.fdiv::after{content:'';flex:1;height:1px;background:var(--border);}
+.fdiv span{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text-secondary);white-space:nowrap;padding:0 4px;}
+
+/* Bloc conditionnel */
+.cond-blk{margin-top:1rem;padding:1.1rem;background:linear-gradient(135deg,#eef4ff,#f5f9ff);border:1px dashed var(--primary-light);border-radius:9px;}
+
+/* Bloc participation */
+.prt-blk{background:#f8fafc;border:1px solid var(--border);border-radius:9px;padding:1rem;margin-bottom:.75rem;}
+.prt-title{font-size:.82rem;font-weight:700;color:var(--primary);margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem;}
+
+/* Input avec unité */
+.unit-wrap{display:flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden;transition:border-color .18s;}
+.unit-wrap:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px rgba(10,46,92,.1);}
+.unit-wrap .fc{border:none!important;border-radius:0!important;flex:1;box-shadow:none!important;}
+.unit-sfx{padding:.6rem .75rem;background:#f0f5ff;color:var(--primary);font-weight:700;font-size:.82rem;border-left:1.5px solid var(--border);display:flex;align-items:center;}
+
+/* Upload */
+.upload-zone{border:2px dashed var(--primary);border-radius:12px;padding:2rem;text-align:center;background:linear-gradient(to bottom,#f8faff,#fff);cursor:pointer;transition:all .2s;}
+.upload-zone.drag-over{background:#e8f0ff;border-color:var(--primary-light);box-shadow:0 0 0 4px rgba(10,46,92,.08);}
+.upload-icon{font-size:2.5rem;color:var(--primary);margin-bottom:.6rem;}
+.file-item{display:flex;align-items:center;gap:.5rem;padding:.4rem .7rem;background:#f8fafc;border:1px solid var(--border);border-radius:6px;margin-bottom:.35rem;font-size:.82rem;}
+.file-err{border-color:var(--clr-err);background:#fff9f9;}
+
+/* Certification */
+.certif-card{background:#fffef0;border:1px solid var(--accent);border-radius:9px;padding:1rem;display:flex;gap:.75rem;align-items:flex-start;}
+.certif-card input[type=checkbox]{margin-top:3px;flex-shrink:0;accent-color:var(--primary);width:16px;height:16px;}
+
+/* Progress */
+.frm-progress{background:#fff;border:1px solid var(--border);border-radius:12px;padding:1rem 1.4rem;box-shadow:var(--shadow-sm);}
+.ps-steps{display:flex;align-items:center;justify-content:center;}
+.ps-step{display:flex;flex-direction:column;align-items:center;gap:.3rem;}
+.ps-num{width:34px;height:34px;background:#dee2e6;color:#6c757d;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;transition:all .25s;}
+.ps-step.active .ps-num{background:var(--primary);color:#fff;box-shadow:0 2px 10px rgba(10,46,92,.35);}
+.ps-lbl{font-size:.68rem;color:var(--text-secondary);font-weight:500;}
+.ps-line{flex:1;height:2px;background:#dee2e6;margin:0 .5rem;min-width:28px;}
+
+/* Actions */
+.form-actions{display:flex;justify-content:flex-end;gap:1rem;padding:1.1rem 1.4rem;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:2rem;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="page-header mb-3">
+    <div>
+      <h1 class="page-title">
+        <i class="fas fa-{% if edit_mode %}edit{% else %}plus-circle{% endif %} me-2"></i>
+        {% if edit_mode %}Modifier la déclaration #{{ decl_id }}{% else %}Nouvelle déclaration{% endif %}
+      </h1>
+      <p class="page-subtitle">Formulaire officiel — Registre National des Bénéficiaires Effectifs · Ministère de la Justice</p>
+    </div>
+    <a href="{{ url_for('liste_declarations') }}" class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-left me-2"></i>Retour
+    </a>
+  </div>
+
+  <!-- Barre de progression -->
+  <div class="frm-progress mb-4">
+    <div class="ps-steps">
+      <div class="ps-step active" id="step-a"><div class="ps-num">A</div><div class="ps-lbl">Entité</div></div>
+      <div class="ps-line"></div>
+      <div class="ps-step" id="step-b"><div class="ps-num">B</div><div class="ps-lbl">Bénéficiaire</div></div>
+      <div class="ps-line"></div>
+      <div class="ps-step" id="step-c"><div class="ps-num">C</div><div class="ps-lbl">Participation</div></div>
+      <div class="ps-line"></div>
+      <div class="ps-step" id="step-d"><div class="ps-num">D</div><div class="ps-lbl">Documents</div></div>
+    </div>
+  </div>
+
+  <form method="POST" enctype="multipart/form-data" id="declaration-form" novalidate>
+
+    <!-- ══════════════════ SECTION A ══════════════════ -->
+    <div class="fs" id="section-a">
+      <div class="fs-head">
+        <div class="fs-badge">A</div>
+        <div><h3>Informations relatives à l'entité déclarante</h3><p>Identité juridique et coordonnées de la société assujettie</p></div>
+      </div>
+      <div class="fs-body">
+        <div class="row g-3">
+
+          <div class="col-md-5">
+            <div class="fw">
+              <label>Dénomination sociale <span class="req">*</span></label>
+              <input type="text" name="denomination_sociale" class="fc"
+                placeholder="Ex : TCHILMA BUILDING SARL"
+                value="{{ form_data.get('denomination_sociale','') }}" required>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="fw">
+              <label>NINEA <span class="req">*</span></label>
+              <input type="text" name="ninea" id="ninea-input" class="fc"
+                value="{{ form_data.get('ninea','') }}" autocomplete="off">
+              <div class="f-fb" id="ninea-fb"></div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="fw">
+              <label>Numéro RCCM</label>
+              <input type="text" name="rccm" id="rccm-input" class="fc"
+                placeholder="Ex : SN.DKR.2011.B.2041"
+                value="{{ form_data.get('rccm','') }}">
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <div class="fw">
+              <label>Forme juridique <span class="req">*</span></label>
+              <select name="forme_juridique" class="fc" required>
+                <option value="">— Sélectionner —</option>
+                <option value="SA"    {% if form_data.get('forme_juridique')=='SA' %}selected{% endif %}>SA — Société Anonyme</option>
+                <option value="SARL"  {% if form_data.get('forme_juridique')=='SARL' %}selected{% endif %}>SARL — Soc. à Responsabilité Limitée</option>
+                <option value="SUARL" {% if form_data.get('forme_juridique')=='SUARL' %}selected{% endif %}>SUARL — Soc. Unipersonnelle à Resp. Limitée</option>
+                <option value="SAS"   {% if form_data.get('forme_juridique')=='SAS' %}selected{% endif %}>SAS — Soc. par Actions Simplifiée</option>
+                <option value="SNC"   {% if form_data.get('forme_juridique')=='SNC' %}selected{% endif %}>SNC — Soc. en Nom Collectif</option>
+                <option value="SCS"   {% if form_data.get('forme_juridique')=='SCS' %}selected{% endif %}>SCS — Soc. en Commandite Simple</option>
+                <option value="SCA"   {% if form_data.get('forme_juridique')=='SCA' %}selected{% endif %}>SCA — Soc. en Commandite par Actions</option>
+                <option value="GIE"   {% if form_data.get('forme_juridique')=='GIE' %}selected{% endif %}>GIE — Groupement d'Intérêt Économique</option>
+                <option value="Association" {% if form_data.get('forme_juridique')=='Association' %}selected{% endif %}>Association</option>
+                <option value="ONG"   {% if form_data.get('forme_juridique')=='ONG' %}selected{% endif %}>ONG</option>
+                <option value="Coopérative" {% if form_data.get('forme_juridique')=='Coopérative' %}selected{% endif %}>Coopérative</option>
+                <option value="EP"    {% if form_data.get('forme_juridique')=='EP' %}selected{% endif %}>Établissement Public</option>
+                <option value="SEM"   {% if form_data.get('forme_juridique')=='SEM' %}selected{% endif %}>Société d'Économie Mixte</option>
+                <option value="Autre" {% if form_data.get('forme_juridique')=='Autre' %}selected{% endif %}>Autre</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Pays (sélection liste) -->
+          <div class="col-md-3">
+            <div class="fw ac-wrap">
+              <label>Pays <span class="req">*</span></label>
+              <input type="text" id="pays-ent-input" name="pays" class="fc"
+                value="{{ form_data.get('pays','Sénégal') }}"
+                placeholder="Choisir le pays…" autocomplete="off" required>
+            </div>
+          </div>
+
+          <!-- Région (si Sénégal) -->
+          <div class="col-md-3" id="ville-region-row" {% if form_data.get('pays','Sénégal')!='Sénégal' %}class="col-md-3 d-none"{% endif %}>
+            <div class="fw">
+              <label>Région</label>
+              <select id="region-sel" class="fc"
+                name="ville"
+                data-value="{{ form_data.get('ville','') }}">
+              </select>
+            </div>
+          </div>
+          <div class="col-md-3" id="ville-region-row2" {% if form_data.get('pays','Sénégal')!='Sénégal' %}class="col-md-3 d-none"{% endif %}>
+            <div class="fw">
+              <label>Département</label>
+              <select id="dept-sel" class="fc" name="departement" disabled
+                data-value="{{ form_data.get('departement','') }}">
+                <option value="">— Choisir la région d'abord —</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Ville texte (si hors Sénégal) -->
+          <div class="col-md-3" id="ville-text-row" {% if form_data.get('pays','Sénégal')=='Sénégal' %}style="display:none"{% endif %}>
+            <div class="fw">
+              <label>Ville</label>
+              <input type="text" id="ville-text" class="fc"
+                name="{{ '' if form_data.get('pays','Sénégal')=='Sénégal' else 'ville' }}"
+                placeholder="Nom de la ville"
+                value="{{ form_data.get('ville','') if form_data.get('pays','Sénégal')!='Sénégal' else '' }}">
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <div class="fw">
+              <label>Greffe / Organe d'enregistrement</label>
+              <input type="text" name="greffe" class="fc" placeholder="Ex : Dakar"
+                value="{{ form_data.get('greffe','') }}">
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="fw">
+              <label>Siège social (adresse complète)</label>
+              <input type="text" name="siege_social" class="fc"
+                placeholder="Ex : 76 FASS CASIER, Dakar, Sénégal"
+                value="{{ form_data.get('siege_social','') }}">
+            </div>
+          </div>
+
+          <!-- Téléphone entité -->
+          <div class="col-md-5">
+            <div class="fw">
+              <label>Téléphone de l'entreprise</label>
+              <div class="tel-wrap" id="tel-ent-wrap">
+                <div class="tel-input-row">
+                  <div class="tel-prefix">
+                    <span class="tel-flag">🇸🇳</span>
+                    <span class="tel-indicatif">+221</span>
+                    <i class="fas fa-chevron-down tel-caret"></i>
+                  </div>
+                  <input type="tel" class="tel-number"
+                    placeholder="77 123 45 67"
+                    value="{{ form_data.get('telephone','') | replace('+221','') | replace('00221','') }}">
+                  <input type="hidden" name="telephone" class="tel-hidden"
+                    value="{{ form_data.get('telephone','') }}">
+                </div>
+                <div class="tel-drop">
+                  <input type="text" class="tel-search" placeholder="🔍 Chercher un pays…">
+                  <ul class="tel-list"></ul>
+                </div>
+                <div class="f-fb tel-fb"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-7">
+            <div class="fw">
+              <label>Email de l'entreprise</label>
+              <input type="email" name="email_entreprise" id="email-ent-input" class="fc"
+                placeholder="contact@entreprise.sn"
+                value="{{ form_data.get('email_entreprise','') }}">
+              <div class="f-fb" id="email-ent-fb"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Questions nature de l'entité -->
+        <div class="fdiv"><span>Nature de l'entité</span></div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="q-card">
+              <span class="q-lbl">L'entreprise est-elle non cotée en bourse ?</span>
+              <div class="pill-group" data-name="cotee_bourse">
+                {% for v,icon in [('Oui','check'),('Non','times'),('Non renseigné','question')] %}
+                <label class="pill-lbl"><input type="radio" name="cotee_bourse" value="{{ v }}" {% if form_data.get('cotee_bourse','Non')==v %}checked{% endif %}><i class="fas fa-{{ icon }} me-1"></i>{{ v }}</label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="q-card">
+              <span class="q-lbl">Filiale d'une entreprise cotée en bourse ?</span>
+              <div class="pill-group" data-name="filiale_cotee" data-toggle="cotee-fields">
+                {% for v,icon in [('Oui','check'),('Non','times'),('Non renseigné','question')] %}
+                <label class="pill-lbl"><input type="radio" name="filiale_cotee" value="{{ v }}" {% if form_data.get('filiale_cotee','Non')==v %}checked{% endif %}><i class="fas fa-{{ icon }} me-1"></i>{{ v }}</label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="q-card">
+              <span class="q-lbl">L'entité est-elle une entreprise d'État ?</span>
+              <div class="pill-group" data-name="entreprise_etat">
+                {% for v,icon in [('Oui','check'),('Non','times'),('Non renseigné','question')] %}
+                <label class="pill-lbl"><input type="radio" name="entreprise_etat" value="{{ v }}" {% if form_data.get('entreprise_etat','Non')==v %}checked{% endif %}><i class="fas fa-{{ icon }} me-1"></i>{{ v }}</label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="q-card">
+              <span class="q-lbl">Autre type d'entité particulier ?</span>
+              <div class="pill-group" data-name="autre_type_entite">
+                {% for v,icon in [('Oui','check'),('Non','times'),('Non renseigné','question')] %}
+                <label class="pill-lbl"><input type="radio" name="autre_type_entite" value="{{ v }}" {% if form_data.get('autre_type_entite','Non')==v %}checked{% endif %}><i class="fas fa-{{ icon }} me-1"></i>{{ v }}</label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Champs cotée (conditionnel) -->
+        <div id="cotee-fields" class="cond-blk {% if form_data.get('filiale_cotee')!='Oui' %}d-none{% endif %}">
+          <div class="fdiv"><span>Informations maison mère / société cotée</span></div>
+          <div class="row g-3">
+            <div class="col-md-3">
+              <div class="q-card">
+                <span class="q-lbl">Cotée à 100% ?</span>
+                <div class="pill-group">
+                  {% for v in ['Oui','Non'] %}
+                  <label class="pill-lbl"><input type="radio" name="cotee_100" value="{{ v }}" {% if form_data.get('cotee_100')==v %}checked{% endif %}>{{ v }}</label>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="fw"><label>Nom de la maison mère</label>
+              <input type="text" name="nom_maison_mere" class="fc" value="{{ form_data.get('nom_maison_mere','') }}"></div>
+            </div>
+            <div class="col-md-5">
+              <div class="fw"><label>Nom de la place boursière</label>
+              <input type="text" name="place_boursiere" class="fc" value="{{ form_data.get('place_boursiere','') }}"></div>
+            </div>
+            <div class="col-md-4">
+              <div class="fw"><label>Numéro ISIN / Stock ISIN</label>
+              <input type="text" name="numero_isin" class="fc" style="text-transform:uppercase" value="{{ form_data.get('numero_isin','') }}"></div>
+            </div>
+            <div class="col-md-4">
+              <div class="fw"><label>% de participation (2–100)</label>
+              <div class="unit-wrap"><input type="number" id="pct-mere-input" name="pourcentage_participation_mere" class="fc pct-field" min="2" max="100" step="0.01" placeholder="Ex : 51" value="{{ form_data.get('pourcentage_participation_mere','') }}"><span class="unit-sfx">%</span></div>
+              <div class="f-fb" id="pct-mere-fb"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ SECTION B ══════════════════ -->
+    <div class="fs" id="section-b">
+      <div class="fs-head">
+        <div class="fs-badge">B</div>
+        <div><h3>Informations sur le bénéficiaire effectif de la société</h3><p>Identité et coordonnées de la personne physique bénéficiaire effectif</p></div>
+      </div>
+      <div class="fs-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="fw"><label>Nom complet (NOM de famille) <span class="req">*</span></label>
+            <input type="text" name="beneficiaire_nom" class="fc" placeholder="NOM en MAJUSCULES" style="text-transform:uppercase" value="{{ form_data.get('beneficiaire_nom','') }}" required></div>
+          </div>
+          <div class="col-md-4">
+            <div class="fw"><label>Prénom(s)</label>
+            <input type="text" name="beneficiaire_prenom" class="fc" placeholder="Prénom(s)" value="{{ form_data.get('beneficiaire_prenom','') }}"></div>
+          </div>
+          <div class="col-md-2">
+            <div class="fw"><label>Sexe <span class="req">*</span></label>
+            <select name="sexe" class="fc" required>
+              <option value="">—</option>
+              <option value="Masculin" {% if form_data.get('sexe')=='Masculin' %}selected{% endif %}>♂ Masculin</option>
+              <option value="Féminin"  {% if form_data.get('sexe')=='Féminin' %}selected{% endif %}>♀ Féminin</option>
+            </select></div>
+          </div>
+          <div class="col-md-2">
+            <div class="fw"><label>Date de naissance <span class="req">*</span></label>
+            <input type="date" name="date_naissance" id="ddn-input" class="fc" value="{{ form_data.get('date_naissance','') }}" required>
+            <div class="f-fb" id="ddn-fb"></div></div>
+          </div>
+
+          <div class="col-md-3">
+            <div class="fw"><label>Lieu de naissance</label>
+            <input type="text" name="lieu_naissance" class="fc" placeholder="Ex : Dakar" value="{{ form_data.get('lieu_naissance','') }}"></div>
+          </div>
+          <div class="col-md-3">
+            <div class="fw ac-wrap">
+              <label>Nationalité(s) <span class="req">*</span></label>
+              <input type="text" name="nationalite" id="nat-input" class="fc" autocomplete="off" placeholder="Taper pour chercher…" value="{{ form_data.get('nationalite','') }}" required>
+              <div class="f-fb" id="nat-fb"></div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="fw ac-wrap">
+              <label>Pays de résidence</label>
+              <input type="text" name="pays_residence" id="paysres-input" class="fc" autocomplete="off" placeholder="Taper pour chercher…" value="{{ form_data.get('pays_residence','') }}">
+            </div>
+          </div>
+
+          <div class="col-md-5">
+            <div class="fw"><label>Adresse personnelle</label>
+            <input type="text" name="adresse_personnelle" class="fc" placeholder="Ex : VDN Bande Verte Lot 11, Dakar" value="{{ form_data.get('adresse_personnelle','') }}"></div>
+          </div>
+          <div class="col-md-7">
+            <div class="fw"><label>Adresse professionnelle</label>
+            <input type="text" name="adresse_professionnelle" class="fc" placeholder="Ex : FASS CASIER N°76, Dakar" value="{{ form_data.get('adresse_professionnelle','') }}"></div>
+          </div>
+
+          <!-- CNI -->
+          <div class="col-md-4">
+            <div class="fw">
+              <label>Numéro CNI <small class="text-muted">(13 chiffres)</small></label>
+              <input type="text" name="numero_cni" id="cni-input" class="fc" value="{{ form_data.get('numero_cni','') }}">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div class="f-fb" id="cni-fb"></div>
+                <div class="char-ctr" id="cni-counter">0/13</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="fw"><label>Numéro Passeport</label>
+            <input type="text" name="numero_passeport" id="passport-input" class="fc" value="{{ form_data.get('numero_passeport','') }}"></div>
+          </div>
+
+          <!-- Téléphone bénéficiaire -->
+          <div class="col-md-4">
+            <div class="fw">
+              <label>Téléphone personnel</label>
+              <div class="tel-wrap" id="tel-ben-wrap">
+                <div class="tel-input-row">
+                  <div class="tel-prefix">
+                    <span class="tel-flag">🇸🇳</span>
+                    <span class="tel-indicatif">+221</span>
+                    <i class="fas fa-chevron-down tel-caret"></i>
+                  </div>
+                  <input type="tel" class="tel-number" placeholder="77 123 45 67" value="{{ form_data.get('telephone_ben','') | replace('+221','') }}">
+                  <input type="hidden" name="telephone_ben" class="tel-hidden" value="{{ form_data.get('telephone_ben','') }}">
+                </div>
+                <div class="tel-drop">
+                  <input type="text" class="tel-search" placeholder="🔍 Chercher un pays…">
+                  <ul class="tel-list"></ul>
+                </div>
+                <div class="f-fb tel-fb"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PPE -->
+        <div class="fdiv"><span><i class="fas fa-user-tie me-2"></i>Personne Politiquement Exposée (PPE)</span></div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="q-card ppe-card">
+              <span class="q-lbl"><i class="fas fa-exclamation-triangle text-warning me-1"></i>Êtes-vous une Personne Politiquement Exposée (PPE) ?</span>
+              <div class="pill-group" data-name="ppe" data-toggle="ppe-fields">
+                {% for v,icon in [('Oui','check'),('Non','times'),('Non renseigné','question')] %}
+                <label class="pill-lbl"><input type="radio" name="ppe" value="{{ v }}" {% if form_data.get('ppe','Non')==v %}checked{% endif %}><i class="fas fa-{{ icon }} me-1"></i>{{ v }}</label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="q-card">
+              <span class="q-lbl">Êtes-vous en relation avec une PPE ?</span>
+              <div class="pill-group" data-name="relation_ppe">
+                {% for v,icon in [('Oui','check'),('Non','times'),('Non renseigné','question')] %}
+                <label class="pill-lbl"><input type="radio" name="relation_ppe" value="{{ v }}" {% if form_data.get('relation_ppe','Non')==v %}checked{% endif %}><i class="fas fa-{{ icon }} me-1"></i>{{ v }}</label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Détails PPE conditionnel -->
+        <div id="ppe-fields" class="cond-blk {% if form_data.get('ppe')!='Oui' %}d-none{% endif %}">
+          <div class="fdiv"><span>Détails PPE</span></div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="fw"><label>Catégorie de PPE</label>
+              <select name="categorie_ppe" class="fc">
+                <option value="">— Sélectionner —</option>
+                {% for cat in ["Chef d'État / Gouvernement","Ministre / Secrétaire d'État","Parlementaire / Député / Sénateur","Magistrat de haut rang","Haut fonctionnaire / Ambassadeur","Dirigeant de parti politique","Dirigeant d'entreprise publique","Membre d'organisation internationale","Officier militaire supérieur","Membre de famille d'une PPE","Associé / Proche d'une PPE"] %}
+                <option value="{{ cat }}" {% if form_data.get('categorie_ppe')==cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+              </select></div>
+            </div>
+            <div class="col-md-6">
+              <div class="fw"><label>Fonction exercée par la PPE</label>
+              <input type="text" name="fonction_ppe" class="fc" placeholder="Ex : Ministre de l'Économie" value="{{ form_data.get('fonction_ppe','') }}"></div>
+            </div>
+            <div class="col-md-3">
+              <div class="fw"><label>Date de début de fonction</label>
+              <input type="date" name="date_debut_fonction" class="fc" value="{{ form_data.get('date_debut_fonction','') }}"></div>
+            </div>
+            <div class="col-md-3">
+              <div class="fw"><label>Date de fin de fonction</label>
+              <input type="date" name="date_fin_fonction" class="fc" value="{{ form_data.get('date_fin_fonction','') }}"></div>
+            </div>
+            <div class="col-md-3">
+              <div class="fw"><label>Date d'acquisition de la propriété</label>
+              <input type="date" name="date_acquisition_propriete" class="fc" value="{{ form_data.get('date_acquisition_propriete','') }}"></div>
+            </div>
+            <div class="col-12">
+              <div class="fw"><label>Nature de la relation avec la PPE (si applicable)</label>
+              <textarea name="nature_relation_ppe" class="fc" rows="2" placeholder="Ex : Conjoint, frère, associé…">{{ form_data.get('nature_relation_ppe','') }}</textarea></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ SECTION C ══════════════════ -->
+    <div class="fs" id="section-c">
+      <div class="fs-head">
+        <div class="fs-badge">C</div>
+        <div><h3>Participation et contrôle</h3><p>Modalités de détention de la propriété et exercice du contrôle sur la société</p></div>
+      </div>
+      <div class="fs-body">
+
+        <div class="prt-blk">
+          <div class="prt-title"><i class="fas fa-arrow-right"></i>Parts sociales directes (seuil minimum : 2%)</div>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <div class="q-card"><span class="q-lbl">Parts sociales directes ?</span>
+              <div class="pill-group">{% for v in ['Oui','Non','Non renseigné'] %}<label class="pill-lbl"><input type="radio" name="parts_directes" value="{{ v }}" {% if form_data.get('parts_directes','Non')==v %}checked{% endif %}>{{ v }}</label>{% endfor %}</div></div>
+            </div>
+            <div class="col-md-3">
+              <div class="fw"><label>Nombre de parts détenues</label>
+              <input type="number" id="nb-parts-direct" name="nombre_parts_directes" class="fc" min="0" step="1" placeholder="Ex : 100" value="{{ form_data.get('nombre_parts_directes','') }}"></div>
+            </div>
+            <div class="col-md-3">
+              <div class="fw"><label>Pourcentage de participation (2–100)</label>
+              <div class="unit-wrap"><input type="number" id="pct-direct-input" name="pourcentage_participation" class="fc" min="2" max="100" step="0.01" placeholder="2 – 100" value="{{ form_data.get('pourcentage_participation','') }}"><span class="unit-sfx">%</span></div>
+              <div class="f-fb" id="pct-direct-fb"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="prt-blk">
+          <div class="prt-title"><i class="fas fa-vote-yea"></i>Droits de vote directs</div>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <div class="q-card"><span class="q-lbl">Droits de vote directs ?</span>
+              <div class="pill-group">{% for v in ['Oui','Non','Non renseigné'] %}<label class="pill-lbl"><input type="radio" name="droits_vote_directs" value="{{ v }}" {% if form_data.get('droits_vote_directs','Non')==v %}checked{% endif %}>{{ v }}</label>{% endfor %}</div></div>
+            </div>
+            <div class="col-md-3">
+              <div class="fw"><label>Nombre de voix</label>
+              <input type="number" id="nb-voix" name="nombre_voix" class="fc" min="0" step="1" placeholder="Ex : 100" value="{{ form_data.get('nombre_voix','') }}"></div>
+            </div>
+            <div class="col-md-3">
+              <div class="fw"><label>Pourcentage des voix (2–100)</label>
+              <div class="unit-wrap"><input type="number" id="pct-voix-input" name="pourcentage_voix" class="fc" min="2" max="100" step="0.01" placeholder="2 – 100" value="{{ form_data.get('pourcentage_voix','') }}"><span class="unit-sfx">%</span></div>
+              <div class="f-fb" id="pct-voix-fb"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="prt-blk">
+          <div class="prt-title"><i class="fas fa-network-wired"></i>Parts sociales indirectes (seuil minimum : 2%)</div>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <div class="q-card"><span class="q-lbl">Parts indirectes ?</span>
+              <div class="pill-group">{% for v in ['Oui','Non','Non renseigné'] %}<label class="pill-lbl"><input type="radio" name="parts_indirectes" value="{{ v }}" {% if form_data.get('parts_indirectes','Non')==v %}checked{% endif %}>{{ v }}</label>{% endfor %}</div></div>
+            </div>
+            <div class="col-md-3">
+              <div class="fw"><label>Nombre de parts indirectes</label>
+              <input type="number" id="nb-parts-indirect" name="nombre_parts_indirectes" class="fc" min="0" step="1" placeholder="Ex : 50" value="{{ form_data.get('nombre_parts_indirectes','') }}"></div>
+            </div>
+            <div class="col-md-3">
+              <div class="fw"><label>% participation indirecte (2–100)</label>
+              <div class="unit-wrap"><input type="number" id="pct-indirect-input" name="pourcentage_participation_indirecte" class="fc" min="2" max="100" step="0.01" placeholder="2 – 100" value="{{ form_data.get('pourcentage_participation_indirecte','') }}"><span class="unit-sfx">%</span></div>
+              <div class="f-fb" id="pct-indirect-fb"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fdiv"><span>Entités intermédiaires (chaîne de participation indirecte)</span></div>
+        <div class="table-responsive mb-3">
+          <table class="table table-bordered table-sm" style="font-size:.82rem">
+            <thead style="background:#f0f5ff"><tr>
+              <th style="width:55%">Dénomination Juridique / Nom – Prénom</th>
+              <th>N° d'identification fiscale / Autres</th>
+            </tr></thead>
+            <tbody>{% for i in range(3) %}<tr>
+              <td><input type="text" name="intermediaire_nom_{{ i }}" class="fc" style="margin:0;border-radius:5px" value="{{ form_data.get('intermediaire_nom_'~i,'') }}"></td>
+              <td><input type="text" name="intermediaire_id_{{ i }}"  class="fc" style="margin:0;border-radius:5px" value="{{ form_data.get('intermediaire_id_'~i,'') }}"></td>
+            </tr>{% endfor %}</tbody>
+          </table>
+        </div>
+
+        <div class="fdiv"><span>Exercice du contrôle</span></div>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="q-card"><span class="q-lbl">Le bénéficiaire est-il représentant légal ?</span>
+            <div class="pill-group">{% for v in ['Oui','Non','Non renseigné'] %}<label class="pill-lbl"><input type="radio" name="representant_legal" value="{{ v }}" {% if form_data.get('representant_legal','Non')==v %}checked{% endif %}>{{ v }}</label>{% endfor %}</div></div>
+          </div>
+          <div class="col-md-4">
+            <div class="q-card"><span class="q-lbl">L'entreprise a d'autres bénéficiaires effectifs ?</span>
+            <div class="pill-group">{% for v in ['Oui','Non','Non renseigné'] %}<label class="pill-lbl"><input type="radio" name="autres_beneficiaires" value="{{ v }}" {% if form_data.get('autres_beneficiaires','Non')==v %}checked{% endif %}>{{ v }}</label>{% endfor %}</div></div>
+          </div>
+          <div class="col-md-4">
+            <div class="fw"><label>Date de devenir bénéficiaire effectif</label>
+            <input type="date" name="date_beneficiaire" class="fc" value="{{ form_data.get('date_beneficiaire','') }}"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ SECTION D ══════════════════ -->
+    <div class="fs" id="section-d">
+      <div class="fs-head">
+        <div class="fs-badge">D</div>
+        <div><h3>Documents justificatifs</h3><p>Pièces jointes obligatoires ou complémentaires — PDF, DOCX, XLSX, ZIP, images — max 100 Mo</p></div>
+      </div>
+      <div class="fs-body">
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" name="documents" id="file-input" multiple accept=".pdf,.zip,.docx,.xlsx,.png,.jpg,.jpeg" class="d-none">
+          <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+          <p class="mb-2 text-muted fw-500">Glissez-déposez vos fichiers ici</p>
+          <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('file-input').click()">
+            <i class="fas fa-folder-open me-1"></i>Parcourir les fichiers
+          </button>
+          <p class="text-muted small mt-2">PDF · DOCX · XLSX · ZIP · Images (PNG/JPG) — Max 100 Mo par fichier</p>
+          <div id="file-list" class="mt-3 text-start"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Certification -->
+    <div class="fs">
+      <div class="fs-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="fw"><label>Certification faite par (Nom et Prénom complets) <span class="req">*</span></label>
+            <input type="text" name="certification_par" class="fc" required placeholder="Nom complet du signataire" value="{{ form_data.get('certification_par','') }}"></div>
+          </div>
+          <div class="col-md-6">
+            <div class="fw"><label>Fonction dans la société <span class="req">*</span></label>
+            <input type="text" name="certification_fonction" class="fc" required placeholder="Ex : Gérant, Directeur Général, PDG" value="{{ form_data.get('certification_fonction','') }}"></div>
+          </div>
+        </div>
+        <div class="certif-card">
+          <input type="checkbox" id="certif-check" required>
+          <label for="certif-check" style="font-size:.875rem;cursor:pointer;line-height:1.6;">
+            Je soussigné(e), certifie sur l'honneur que les informations fournies dans la présente déclaration sont exactes, sincères et complètes, conformément aux dispositions de la loi portant sur le Registre National des Bénéficiaires Effectifs de la République du Sénégal. Je suis informé(e) des sanctions pénales et administratives encourues en cas de fausse déclaration.
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <a href="{{ url_for('liste_declarations') }}" class="btn btn-cancel"><i class="fas fa-times me-2"></i>Annuler</a>
+      <button type="submit" class="btn btn-submit" id="submit-btn">
+        <i class="fas fa-paper-plane me-2"></i>{% if edit_mode %}Enregistrer les modifications{% else %}Soumettre la déclaration{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/referentiel.js') }}"></script>
+<script src="{{ url_for('static', filename='js/form_controls.js') }}"></script>
+{% endblock %}

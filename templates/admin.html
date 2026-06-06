@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Administration{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="page-header mb-4">
+    <div>
+      <h1 class="page-title"><i class="fas fa-users-cog me-2"></i>Administration</h1>
+      <p class="page-subtitle">Gestion des utilisateurs et des autorisations</p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card-custom">
+        <div class="card-custom-header">
+          <h5><i class="fas fa-users me-2"></i>Utilisateurs ({{ users|length }})</h5>
+        </div>
+        <div class="card-custom-body p-0">
+          <table class="table table-custom mb-0">
+            <thead>
+              <tr>
+                <th>Utilisateur</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Export autorisé</th>
+                <th>Créé le</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for user in users %}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="user-avatar-sm">{{ user.prenom[0] }}{{ user.nom[0] }}</div>
+                    <strong>{{ user.prenom }} {{ user.nom }}</strong>
+                  </div>
+                </td>
+                <td>{{ user.email }}</td>
+                <td>
+                  {% if user.role == 'admin' %}
+                  <span class="badge-admin-full">Administrateur</span>
+                  {% else %}
+                  <span class="badge-user-full">Utilisateur</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if user.export_autorise %}
+                  <span class="export-badge-on"><i class="fas fa-check me-1"></i>Autorisé</span>
+                  {% else %}
+                  <span class="export-badge-off"><i class="fas fa-times me-1"></i>Non autorisé</span>
+                  {% endif %}
+                </td>
+                <td>{{ user.created_at.strftime('%d/%m/%Y') if user.created_at else '—' }}</td>
+                <td>
+                  <div class="action-buttons">
+                    {% if user.id != session.get('user_id') %}
+                    <!-- Toggle export -->
+                    <form method="POST" action="{{ url_for('toggle_export', user_id=user.id) }}" style="display:inline">
+                      <button type="submit" class="btn btn-xs {% if user.export_autorise %}btn-delete{% else %}btn-view{% endif %}"
+                        title="{% if user.export_autorise %}Révoquer l'export{% else %}Autoriser l'export{% endif %}">
+                        <i class="fas fa-{% if user.export_autorise %}lock{% else %}unlock{% endif %}"></i>
+                        {% if user.export_autorise %}Révoquer{% else %}Autoriser{% endif %}
+                      </button>
+                    </form>
+                    <!-- Supprimer -->
+                    <form method="POST" action="{{ url_for('supprimer_utilisateur', user_id=user.id) }}"
+                          style="display:inline" onsubmit="return confirm('Supprimer cet utilisateur ?')">
+                      <button type="submit" class="btn btn-xs btn-delete" title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                    {% else %}
+                    <span class="text-muted small"><i class="fas fa-user-check me-1"></i>Vous</span>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card-custom">
+        <div class="card-custom-header">
+          <h5><i class="fas fa-user-plus me-2"></i>Nouvel utilisateur</h5>
+        </div>
+        <div class="card-custom-body">
+          <form method="POST" action="{{ url_for('nouveau_utilisateur') }}">
+            <div class="mb-3">
+              <label class="form-label-custom">Prénom</label>
+              <input type="text" name="prenom" class="form-control-custom" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label-custom">Nom</label>
+              <input type="text" name="nom" class="form-control-custom" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label-custom">Email</label>
+              <input type="email" name="email" class="form-control-custom" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label-custom">Mot de passe</label>
+              <input type="password" name="password" class="form-control-custom" required minlength="8" placeholder="Min. 8 caractères">
+            </div>
+            <div class="mb-3">
+              <label class="form-label-custom">Rôle</label>
+              <select name="role" class="form-select-custom">
+                <option value="user">Utilisateur</option>
+                <option value="admin">Administrateur</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <div class="certification-check">
+                <input type="checkbox" name="export_autorise" id="export_auto" value="1">
+                <label for="export_auto">Autoriser l'export des données dès la création</label>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary-custom w-100">
+              <i class="fas fa-user-plus me-2"></i>Créer l'utilisateur
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Légende export -->
+      <div class="card-custom mt-3">
+        <div class="card-custom-header">
+          <h5><i class="fas fa-info-circle me-2"></i>Autorisation d'export</h5>
+        </div>
+        <div class="card-custom-body">
+          <p class="text-muted small mb-2">L'autorisation d'export permet à un utilisateur de télécharger les données en Excel. Par défaut :</p>
+          <ul class="small text-muted">
+            <li class="mb-1"><span class="export-badge-on">Autorisé</span> — les Administrateurs</li>
+            <li><span class="export-badge-off">Non autorisé</span> — les Utilisateurs standards</li>
+          </ul>
+          <p class="text-muted small mt-2">Utilisez le bouton <strong>Autoriser / Révoquer</strong> pour modifier à tout moment.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

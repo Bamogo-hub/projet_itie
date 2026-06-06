@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: registre-beneficiaires-sn
+    env: python
+    buildCommand: pip install -r requirements.txt && flask db upgrade
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: beneficiaires-db
+          property: connectionString
+      - key: UPLOAD_FOLDER
+        value: /tmp/uploads
+
+databases:
+  - name: beneficiaires-db
+    databaseName: beneficiaires
+    user: admin_justice
+    plan: free

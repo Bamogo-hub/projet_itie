@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Documents — Déclaration #{{ declaration.id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="page-header mb-4">
+    <div>
+      <h1 class="page-title"><i class="fas fa-folder-open me-2"></i>Documents justificatifs</h1>
+      <p class="page-subtitle">Déclaration #{{ declaration.id }} — {{ declaration.denomination_sociale }}</p>
+    </div>
+    <a href="{{ url_for('detail_declaration', decl_id=declaration.id) }}" class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-left me-2"></i>Retour
+    </a>
+  </div>
+
+  {% if declaration.fichiers %}
+  <div class="card-custom">
+    <div class="card-custom-header">
+      <h5><i class="fas fa-paperclip me-2"></i>{{ declaration.fichiers|length }} fichier(s) attaché(s)</h5>
+    </div>
+    <div class="card-custom-body">
+      <div class="doc-list">
+        {% for fichier in declaration.fichiers %}
+        {% set ext = fichier.nom.rsplit('.', 1)[-1].lower() %}
+        <div class="doc-item">
+          <div class="doc-icon doc-icon-{% if ext == 'pdf' %}pdf{% elif ext == 'zip' %}zip{% elif ext == 'docx' %}docx{% elif ext == 'xlsx' %}xlsx{% else %}img{% endif %}">
+            <i class="fas fa-file-{% if ext == 'pdf' %}pdf{% elif ext == 'zip' %}archive{% elif ext == 'docx' %}word{% elif ext == 'xlsx' %}excel{% else %}image{% endif %}"></i>
+          </div>
+          <div class="doc-info">
+            <div class="doc-name">{{ fichier.nom }}</div>
+            <div class="doc-meta">
+              <span class="text-uppercase fw-bold">{{ ext }}</span>
+              {% if ext in ['pdf','png','jpg','jpeg'] %}
+              <span class="ms-2 text-success"><i class="fas fa-eye me-1"></i>Prévisualisation disponible</span>
+              {% else %}
+              <span class="ms-2 text-muted"><i class="fas fa-download me-1"></i>Téléchargement requis</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="doc-actions">
+            {% if ext in ['pdf','png','jpg','jpeg'] %}
+            <button class="btn btn-xs btn-view"
+              onclick="ouvrirDocument('{{ url_for('servir_fichier', decl_id=declaration.id, filename=fichier.nom) }}', '{{ fichier.nom }}')">
+              <i class="fas fa-eye me-1"></i>Lire
+            </button>
+            {% endif %}
+            <a href="{{ url_for('servir_fichier', decl_id=declaration.id, filename=fichier.nom) }}"
+               class="btn btn-xs btn-doc" download="{{ fichier.nom }}">
+              <i class="fas fa-download me-1"></i>Télécharger
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if declaration.fichier_zip %}
+      <div class="mt-3 p-3 bg-light rounded border">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <i class="fas fa-file-archive text-warning me-2"></i>
+            <strong>Archive ZIP complète</strong>
+            <span class="text-muted ms-2">— tous les fichiers en un seul téléchargement</span>
+          </div>
+          <a href="{{ url_for('servir_fichier', decl_id=declaration.id, filename=declaration.fichier_zip.split('/')[-1] if '/' in declaration.fichier_zip else declaration.fichier_zip) }}"
+             class="btn btn-xs btn-doc">
+            <i class="fas fa-download me-1"></i>Télécharger ZIP
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="card-custom">
+    <div class="card-custom-body text-center py-5">
+      <i class="fas fa-folder-open fa-3x text-muted mb-3 d-block"></i>
+      <strong>Aucun document justificatif</strong>
+      <p class="text-muted mt-2">Aucun fichier n'a été joint à cette déclaration.</p>
+      <a href="{{ url_for('modifier_declaration', decl_id=declaration.id) }}" class="btn btn-primary-custom mt-2">
+        <i class="fas fa-paperclip me-2"></i>Ajouter des documents
+      </a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Modal Visionneuse -->
+<div class="modal fade doc-viewer-modal" id="docViewerModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--primary);color:white;">
+        <h5 class="modal-title" id="docViewerTitle">Document</h5>
+        <div class="ms-auto d-flex gap-2 align-items-center">
+          <a href="#" id="docViewerDownload" class="btn btn-xs btn-doc" download>
+            <i class="fas fa-download me-1"></i>Télécharger
+          </a>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+      </div>
+      <div class="modal-body p-0">
+        <iframe id="docViewerFrame" src="" style="width:100%;height:78vh;border:none;display:none;"></iframe>
+        <div id="docViewerNoPreview" class="no-preview-box" style="display:none;">
+          <i class="fas fa-file-download"></i>
+          <div>
+            <strong>Prévisualisation non disponible</strong>
+            <p class="text-muted mt-1">Ce type de fichier ne peut pas être affiché dans le navigateur.</p>
+            <a href="#" id="docViewerDlBtn" class="btn btn-primary-custom mt-2">
+              <i class="fas fa-download me-2"></i>Télécharger le fichier
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

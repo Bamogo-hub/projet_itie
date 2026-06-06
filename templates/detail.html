@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Déclaration #{{ declaration.id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header mb-4">
+        <div>
+            <h1 class="page-title"><i class="fas fa-file-alt me-2"></i>Déclaration #{{ declaration.id }}</h1>
+            <p class="page-subtitle">Soumise le {{ declaration.date_saisie[:10] if declaration.date_saisie else '—' }} par {{ declaration.utilisateur_nom }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('modifier_declaration', decl_id=declaration.id) }}" class="btn btn-primary-custom">
+                <i class="fas fa-edit me-2"></i>Modifier
+            </a>
+            <a href="{{ url_for('liste_declarations') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card-custom">
+                <div class="card-custom-header">
+                    <h5><span class="section-badge-sm">A</span> Entité déclarante</h5>
+                </div>
+                <div class="card-custom-body">
+                    <div class="detail-grid">
+                        <div class="detail-item"><span class="detail-label">Dénomination sociale</span><span class="detail-value"><strong>{{ declaration.denomination_sociale or '—' }}</strong></span></div>
+                        <div class="detail-item"><span class="detail-label">NINEA</span><span class="detail-value"><code>{{ declaration.ninea or '—' }}</code></span></div>
+                        <div class="detail-item"><span class="detail-label">RCCM</span><span class="detail-value">{{ declaration.rccm or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Forme juridique</span><span class="detail-value">{% if declaration.forme_juridique %}<span class="forme-badge">{{ declaration.forme_juridique }}</span>{% else %}—{% endif %}</span></div>
+                        <div class="detail-item"><span class="detail-label">Pays</span><span class="detail-value">{{ declaration.pays or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Siège social</span><span class="detail-value">{{ declaration.siege_social or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Téléphone</span><span class="detail-value">{{ declaration.telephone or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Email</span><span class="detail-value">{{ declaration.email_entreprise or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Entreprise d'État</span><span class="detail-value">{{ declaration.entreprise_etat or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Cotée en bourse</span><span class="detail-value">{{ declaration.filiale_cotee or '—' }}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card-custom">
+                <div class="card-custom-header">
+                    <h5>
+                        <span class="section-badge-sm">B</span> Bénéficiaire effectif
+                        {% if declaration.ppe == 'Oui' %}
+                        <span class="badge-ppe-yes ms-2"><i class="fas fa-exclamation-triangle me-1"></i>PPE</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-custom-body">
+                    <div class="detail-grid">
+                        <div class="detail-item"><span class="detail-label">Nom complet</span><span class="detail-value"><strong>{{ declaration.beneficiaire_nom or '—' }} {{ declaration.beneficiaire_prenom or '' }}</strong></span></div>
+                        <div class="detail-item"><span class="detail-label">Sexe</span><span class="detail-value">{{ declaration.sexe or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Date de naissance</span><span class="detail-value">{{ declaration.date_naissance or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Lieu de naissance</span><span class="detail-value">{{ declaration.lieu_naissance or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Nationalité</span><span class="detail-value">{{ declaration.nationalite or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Pays de résidence</span><span class="detail-value">{{ declaration.pays_residence or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Adresse personnelle</span><span class="detail-value">{{ declaration.adresse_personnelle or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">N° CNI/Passeport</span><span class="detail-value">{{ declaration.numero_cni or declaration.numero_passeport or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">PPE</span><span class="detail-value">{% if declaration.ppe == 'Oui' %}<span class="badge-ppe-yes">Oui — {{ declaration.fonction_ppe or 'N/A' }}</span>{% else %}Non{% endif %}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card-custom">
+                <div class="card-custom-header">
+                    <h5><span class="section-badge-sm">C</span> Participation et contrôle</h5>
+                </div>
+                <div class="card-custom-body">
+                    <div class="detail-grid">
+                        <div class="detail-item"><span class="detail-label">Parts directes</span><span class="detail-value">{{ declaration.parts_directes or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Nombre de parts</span><span class="detail-value">{{ declaration.nombre_parts_directes or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">% Participation</span><span class="detail-value"><strong>{{ declaration.pourcentage_participation or '—' }}{% if declaration.pourcentage_participation %}%{% endif %}</strong></span></div>
+                        <div class="detail-item"><span class="detail-label">Droits de vote directs</span><span class="detail-value">{{ declaration.droits_vote_directs or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">% des voix</span><span class="detail-value">{{ declaration.pourcentage_voix or '—' }}{% if declaration.pourcentage_voix %}%{% endif %}</span></div>
+                        <div class="detail-item"><span class="detail-label">Parts indirectes</span><span class="detail-value">{{ declaration.parts_indirectes or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Représentant légal</span><span class="detail-value">{{ declaration.representant_legal or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Date bénéficiaire</span><span class="detail-value">{{ declaration.date_beneficiaire or '—' }}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card-custom">
+                <div class="card-custom-header">
+                    <h5><span class="section-badge-sm">D</span> Documents & Métadonnées</h5>
+                </div>
+                <div class="card-custom-body">
+                    <div class="detail-grid">
+                        <div class="detail-item"><span class="detail-label">Statut</span><span class="detail-value"><span class="status-badge status-submitted">{{ declaration.statut or 'Soumis' }}</span></span></div>
+                        <div class="detail-item"><span class="detail-label">Date saisie</span><span class="detail-value">{{ declaration.date_saisie[:10] if declaration.date_saisie else '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Saisi par</span><span class="detail-value">{{ declaration.utilisateur_nom or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Email utilisateur</span><span class="detail-value">{{ declaration.utilisateur_email or '—' }}</span></div>
+                        <div class="detail-item"><span class="detail-label">Fichier ZIP</span><span class="detail-value">{% if declaration.fichier_zip %}<a href="#" class="btn btn-xs btn-doc"><i class="fas fa-file-archive me-1"></i>Télécharger</a>{% else %}—{% endif %}</span></div>
+                        <div class="detail-item"><span class="detail-label">Lien Drive</span><span class="detail-value">{% if declaration.lien_drive %}<a href="{{ declaration.lien_drive }}" target="_blank" class="btn btn-xs btn-doc"><i class="fab fa-google-drive me-1"></i>Ouvrir</a>{% else %}—{% endif %}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
